@@ -1,0 +1,6 @@
+<VisualMicro>
+  <Program Name="ESP8266_Base_for_All" Ext=".ino" Location="C:\Users\Ricardo\Documents\Arduino\ESP8266_Base_for_All">
+    <Debug DebugMode="Full" DebugEnabled="1" />
+    <Compile />
+  </Program>
+</VisualMicro>
