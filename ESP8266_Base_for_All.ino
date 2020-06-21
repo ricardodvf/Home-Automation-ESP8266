@@ -306,7 +306,10 @@ void checkAvailabilities() {
 //************************************************************************************************************************
 void handleButtonPressed(long x, long y) {
   tft.setCursor(40, 20);
-  tft.setTextColor(TFT_BLACK, TFT_WHITE) ;
+
+  tft.setTextSize(0.1);
+  tft.setFreeFont(FF17);
+  tft.setTextColor(TFT_BLACK);
 
   Serial.println("Pressed");
   if (screen == "main") {
@@ -314,6 +317,9 @@ void handleButtonPressed(long x, long y) {
   }
   else if (screen == "lightsmenu") {
     handleButtonsLightsMenu(x, y);
+  }
+  else if (screen == "fishtankmenu") {
+    handleButtonsFishTankMenu(x, y);
   }
   else if (screen == "temperaturesmenu") {
     handleButtonsTemperaturesMenu(x, y);
@@ -383,12 +389,18 @@ void handleButtonsLightsMenu(long x, long y) {
       drawBmp("/wifi_off.bmp", 0, 0);
     }
     tft.fillRect(40, 0, 280, 28, TFT_WHITE);
+    tft.setTextSize(0.1);
+    tft.setFreeFont(FF17);
+    tft.setTextColor(TFT_BLACK);
     tft.print("MAIN MENU");
   }
 }
 //************************************************************************************************************************
 void handleButtonsMainScreen(long x, long y) {
   tft.fillRect(40, 0, 280, 28, TFT_WHITE);
+  tft.setTextSize(0.1);
+  tft.setFreeFont(FF17);
+  tft.setTextColor(TFT_BLACK);
   if (x > 0 && x < 157 && y > 29 && y < 124) {
     //Temperature Button
     tft.print("TEMPERATURE BUTTON");
@@ -413,8 +425,18 @@ void handleButtonsMainScreen(long x, long y) {
   else if ( x > 0 && x < 157 && y > 135 && y < 241) {
     //FISH BUTTON
     tft.print("FISH BUTTON");
-    instructionsToSend.instruction1 = 2;
-    SendMessageRF24(fish_node);
+    
+    drawBmp("/FishMenu.bmp", 0, 0);
+    if (connectedtoWIFI) {
+        drawBmp("/wifi.bmp", 0, 0);
+    }
+    else {
+        drawBmp("/wifi_off.bmp", 0, 0);
+    }
+    tft.fillRect(40, 0, 280, 28, TFT_WHITE);
+    tft.print("FISH TANK MENU");
+    PrintFishTankInfo();
+    screen = "fishtankmenu";
   }
   else if ( x > 165 && x < 321 && y > 140 && y < 241) {
     //LIGHT BUTTON
@@ -608,6 +630,58 @@ String getContentType(String filename) {
   return "text/plain";
 }
 //************************************************************************************************************************
+void handleButtonsFishTankMenu(long x, long y) {
+    if (x > 110 && x < 320 && y > 29 && y < 125) {
+        instructionsToSend.instruction1 = 2;
+        SendMessageRF24(fish_node);
+
+    }
+    else  if (x > 0 && x < 100 && y > 29 && y < 125) {
+        //UPPER LEFT BUTTON
+        
+        screen = "main";
+        drawBmp("/homemenu2.bmp", 0, 0);
+        if (connectedtoWIFI) {
+            drawBmp("/wifi.bmp", 0, 0);
+        }
+        else {
+            drawBmp("/wifi_off.bmp", 0, 0);
+        }
+        tft.setTextSize(0.1);
+        tft.setFreeFont(FF17);
+        tft.setTextColor(TFT_BLACK);
+        tft.print("MAIN MENU");
+        tft.fillRect(40, 0, 280, 28, TFT_WHITE);
+    }
+}
+//************************************************************************************************************************
+void PrintFishTankInfo() {
+    checkAvailabilities();
+    //Change font size and color
+    tft.setTextSize(0.5);
+    tft.setFreeFont(FF42);
+    tft.setTextColor(TFT_BLACK);
+
+    tft.fillRect(160, 160, 100, 16, TFT_WHITE);
+    tft.setCursor(160, 160);
+    tft.println(FishTank.temperature);
+
+    tft.fillRect(160, 190, 100, 16, TFT_WHITE);
+    tft.setCursor(160, 190);
+    if (FishTank.isOnline == 0) {
+        tft.println("Offline");
+    }
+    else if (FishTank.isOnline == 1) {
+        tft.println("Online");
+    }
+    
+
+    tft.fillRect(160, 220, 100, 16, TFT_WHITE);
+    tft.setCursor(160, 220);
+    tft.println(FishTank.timerLeft);
+}
+
+//************************************************************************************************************************
 void HandleFishNodeMessage(contactorStationInformation Received) {
   FishTank = Received;
   if (screen == "temperaturesmenu") {
@@ -616,6 +690,10 @@ void HandleFishNodeMessage(contactorStationInformation Received) {
     Serial.print(F("Temperature: ")); Serial.println(FishTank.temperature);
     Serial.print(F("Humidity: ")); Serial.println(FishTank.humidity);
     Serial.print(F("Motion: ")); Serial.println(FishTank.motion);
+  }
+  if (screen == "fishtankmenu") {
+     
+      PrintFishTankInfo();
   }
 }
 //************************************************************************************************************************

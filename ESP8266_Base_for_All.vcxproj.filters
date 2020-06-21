@@ -22,5 +22,8 @@
     <ClInclude Include="__vm\.ESP8266_Base_for_All.vsarduino.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="__vm\.Home-Automation-ESP8266.vsarduino.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
