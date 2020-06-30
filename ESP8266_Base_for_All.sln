@@ -7,7 +7,25 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ESP8266_Base_for_All", "ESP
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Fish_Tank", "Fish_Tank\Fish_Tank.vcxproj", "{2746250C-9779-4C38-A9CB-466ACCB8EAB7}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SPI-1.0", "..\..\..\AppData\Local\arduino15\packages\arduino\hardware\avr\1.8.2\libraries\SPI\SPI-1.0.vcxitems", "{B6D6421E-CE56-498F-93BD-34AE49FE7A0E}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RF24-1.3.3", "..\libraries\RF24\RF24-1.3.3.vcxitems", "{32D39E17-C395-496D-B063-ACFFC0189550}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "RF24Network-1.0.9", "..\libraries\RF24Network\RF24Network-1.0.9.vcxitems", "{D5515ACB-0FF0-496B-8903-315C6B9DC391}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DHTLib-0.0.0", "..\libraries\DHTLib\DHTLib-0.0.0.vcxitems", "{FCBD570B-6FF8-4649-8E3D-4FFA8D2ADAE7}"
+EndProject
 Global
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		..\..\..\AppData\Local\arduino15\packages\arduino\hardware\avr\1.8.2\libraries\SPI\SPI-1.0.vcxitems*{2746250c-9779-4c38-a9cb-466accb8eab7}*SharedItemsImports = 4
+		..\libraries\DHTLib\DHTLib-0.0.0.vcxitems*{2746250c-9779-4c38-a9cb-466accb8eab7}*SharedItemsImports = 4
+		..\libraries\RF24Network\RF24Network-1.0.9.vcxitems*{2746250c-9779-4c38-a9cb-466accb8eab7}*SharedItemsImports = 4
+		..\libraries\RF24\RF24-1.3.3.vcxitems*{2746250c-9779-4c38-a9cb-466accb8eab7}*SharedItemsImports = 4
+		..\libraries\RF24\RF24-1.3.3.vcxitems*{32d39e17-c395-496d-b063-acffc0189550}*SharedItemsImports = 9
+		..\..\..\AppData\Local\arduino15\packages\arduino\hardware\avr\1.8.2\libraries\SPI\SPI-1.0.vcxitems*{b6d6421e-ce56-498f-93bd-34ae49fe7a0e}*SharedItemsImports = 9
+		..\libraries\RF24Network\RF24Network-1.0.9.vcxitems*{d5515acb-0ff0-496b-8903-315c6b9dc391}*SharedItemsImports = 9
+		..\libraries\DHTLib\DHTLib-0.0.0.vcxitems*{fcbd570b-6ff8-4649-8e3d-4ffa8d2adae7}*SharedItemsImports = 9
+	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x86 = Debug|x86
 		Release|x86 = Release|x86

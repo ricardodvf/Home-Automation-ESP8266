@@ -29,12 +29,11 @@ RF24Network network(radio);
 unsigned long lastUpdate;
 const uint16_t this_node = 00;
 const uint16_t dulce_node = 01;
-const uint16_t ashley_node = 05;
+const uint16_t weather1_node = 02;
 const uint16_t masterbedroom_node = 03;
 const uint16_t fish_node = 04;
-const uint16_t weather1_node = 02;
+const uint16_t ashley_node = 05;
 const uint16_t catfeeder1_node = 014;
-
 
 typedef struct  {
   long isOnline;
@@ -55,18 +54,32 @@ typedef struct  {
 instructions instructionsToSend;
 
 typedef struct  {
+  uint16_t node_Address;
   long isOnline;
   long isON;
   float temperature;
   float humidity;
   long motion;
   long timerLeft;
+  float current;
+  unsigned long lastHeartBeat;
+  float F1;
+  float F2;
+  float F3;
+  float F4;
+  float F5;
+  long L1;
+  long L2;
+  long L3;
+  long L4;
+  long L5;
 } contactorStationInformation;
 
 contactorStationInformation DulceRoom;
 contactorStationInformation AshleyRoom;
 contactorStationInformation MasterBedRoom;
 contactorStationInformation FishTank;
+contactorStationInformation CatFeeder;
 contactorStationInformation WeatherStation1;
 
 #include <ESP8266WiFi.h>
@@ -94,42 +107,6 @@ bool connectedtoWIFI = true;
 
 unsigned long lastTemperaturePrint;
 
-//************************************************************************************************************************
-void GetRealTime() {
-
-  timeClient.update();
-  unsigned long unix_epoch = timeClient.getEpochTime();    // Get Unix epoch time from the NTP server
-
-  second_ = second(unix_epoch);
-  if (last_second != second_) {
-
-    minute_ = minute(unix_epoch);
-    hour_   = hour(unix_epoch);
-    day_    = day(unix_epoch);
-    month_  = month(unix_epoch);
-    year_   = year(unix_epoch);
-
-    Time[12] = second_ % 10 + 48;
-    Time[11] = second_ / 10 + 48;
-    Time[9]  = minute_ % 10 + 48;
-    Time[8]  = minute_ / 10 + 48;
-    Time[6]  = hour_   % 10 + 48;
-    Time[5]  = hour_   / 10 + 48;
-
-    Date[5]  = day_   / 10 + 48;
-    Date[6]  = day_   % 10 + 48;
-    Date[8]  = month_  / 10 + 48;
-    Date[9]  = month_  % 10 + 48;
-    Date[13] = (year_   / 10) % 10 + 48;
-    Date[14] = year_   % 10 % 10 + 48;
-  }
-  Serial.print(Date); Serial.print(" "); Serial.println(Time);
-  Serial.println(timeClient.getDay());
-  Serial.println(timeClient.getHours());
-  Serial.println(timeClient.getMinutes());
-  Serial.println(timeClient.getSeconds());
-  lastRealTime = millis();
-}
 
 //************************************************************************************************************************
 void setup(void) {
@@ -137,6 +114,7 @@ void setup(void) {
   SPI.begin();
   radio.begin();
   network.begin(90, this_node);
+  radio.setPALevel(RF24_PA_MAX);
   SPIFFS.begin();
   Serial.begin(115200);         // Start the Serial communication to send messages to the computer
 
@@ -204,13 +182,13 @@ void setup(void) {
   drawBmp("/homemenu2.bmp", 0, 0);
   if (connectedtoWIFI) {
     drawBmp("/wifi.bmp", 0, 0);
-    GetRealTime();
+    GetDateTime();
   }
   else {
     drawBmp("/wifi_off.bmp", 0, 0);
   }
   tft.fillRect(40, 0, 280, 28, TFT_WHITE);
-
+  
 }
 //************************************************************************************************************************
 void loop(void) {
@@ -218,7 +196,7 @@ void loop(void) {
     PrintTemperatures1();
   }
   if (millis() - lastRealTime > 86400000) {
-    GetRealTime();
+      GetDateTime();
   }
   server.handleClient();                    // Listen for HTTP requests from clients
   network.update();
@@ -230,21 +208,33 @@ void loop(void) {
     Serial.print("Network Available: "); Serial.println(headerReceive.from_node);
     if (headerReceive.from_node == fish_node) {
       HandleFishNodeMessage(receivedInstructions);
+      FishTank.lastHeartBeat = millis();
+      FishTank.isOnline = true;
     }
     else if (headerReceive.from_node == dulce_node) {
       HandleDulceNodeMessage(receivedInstructions);
+      DulceRoom.lastHeartBeat = millis();
+      DulceRoom.isOnline = true;
     }
     else if (headerReceive.from_node == ashley_node) {
       HandleAshleyNodeMessage(receivedInstructions);
+      AshleyRoom.lastHeartBeat = millis();
+      AshleyRoom.isOnline = true;
     }
     else if (headerReceive.from_node == masterbedroom_node) {
       HandleMasterBedroomNodeMessage(receivedInstructions);
+      MasterBedRoom.lastHeartBeat = millis();
+      MasterBedRoom.isOnline = true;
     }
     else if (headerReceive.from_node == weather1_node) {
       HandleWeather1NodeMessage(receivedInstructions);
+      WeatherStation1.lastHeartBeat = millis();
+      WeatherStation1.isOnline = true;
     }
      else if (headerReceive.from_node == catfeeder1_node) {
       HandleCatFeeder1NodeMessage(receivedInstructions);
+      CatFeeder.lastHeartBeat = millis();
+      CatFeeder.isOnline = true;
     }
   }
   uint16_t x = 0, y = 0; // To store the touch coordinates
@@ -257,51 +247,113 @@ void loop(void) {
   }
 
 }
+
+//***********************************************************************************************************************
 //************************************************************************************************************************
+void GetDateTime() {
+    //Gets the date and time from the internet
+    timeClient.update();
+    unsigned long unix_epoch = timeClient.getEpochTime();    // Get Unix epoch time from the NTP server
+
+    second_ = second(unix_epoch);
+    if (last_second != second_) {
+
+        minute_ = minute(unix_epoch);
+        hour_ = hour(unix_epoch);
+        day_ = day(unix_epoch);
+        month_ = month(unix_epoch);
+        year_ = year(unix_epoch);
+
+        Time[12] = second_ % 10 + 48;
+        Time[11] = second_ / 10 + 48;
+        Time[9] = minute_ % 10 + 48;
+        Time[8] = minute_ / 10 + 48;
+        Time[6] = hour_ % 10 + 48;
+        Time[5] = hour_ / 10 + 48;
+
+        Date[5] = day_ / 10 + 48;
+        Date[6] = day_ % 10 + 48;
+        Date[8] = month_ / 10 + 48;
+        Date[9] = month_ % 10 + 48;
+        Date[13] = (year_ / 10) % 10 + 48;
+        Date[14] = year_ % 10 % 10 + 48;
+    }
+    Serial.print(Date); Serial.print(" "); Serial.println(Time);
+    Serial.println(timeClient.getDay());
+    Serial.println(timeClient.getHours());
+    Serial.println(timeClient.getMinutes());
+    Serial.println(timeClient.getSeconds());
+    lastRealTime = millis();
+}
+//************************************************************************************************************************
+
 void checkAvailabilities() {
 
   bool ok;
   instructionsToSend.instruction1 = 4;
+
   RF24NetworkHeader headerSend(dulce_node);
   if (network.write(headerSend, &instructionsToSend, sizeof(instructionsToSend))) {
     DulceRoom.isOnline = true;
+    DulceRoom.lastHeartBeat = millis();
   }
-  else {
-    DulceRoom.isOnline = false;
-  }
+
   headerSend.to_node = ashley_node;
   if (network.write(headerSend, &instructionsToSend, sizeof(instructionsToSend))) {
     AshleyRoom.isOnline = true;
+    AshleyRoom.lastHeartBeat = millis();
   }
-  else {
-    AshleyRoom.isOnline = false;
-  }
+
   headerSend.to_node = masterbedroom_node;
   if (network.write(headerSend, &instructionsToSend, sizeof(instructionsToSend))) {
     MasterBedRoom.isOnline = true;
+    MasterBedRoom.lastHeartBeat = millis();
   }
-  else {
-    MasterBedRoom.isOnline = false;
-  }
+
   headerSend.to_node = fish_node;
   if (network.write(headerSend, &instructionsToSend, sizeof(instructionsToSend))) {
     FishTank.isOnline = true;
+    FishTank.lastHeartBeat = millis();
   }
-  else {
-    FishTank.isOnline = false;
-  }
+
   headerSend.to_node = weather1_node;
   if (network.write(headerSend, &instructionsToSend, sizeof(instructionsToSend))) {
     WeatherStation1.isOnline = true;
+    WeatherStation1.lastHeartBeat = millis();
   }
-  else {
-    WeatherStation1.isOnline = false;
+
+  headerSend.to_node = catfeeder1_node;
+  if (network.write(headerSend, &instructionsToSend, sizeof(instructionsToSend))) {
+      CatFeeder.isOnline = true;
+      CatFeeder.lastHeartBeat = millis();
   }
+
+  if (millis() - FishTank.lastHeartBeat > 61000) {
+      FishTank.isOnline = false;
+  }
+  if (millis() - DulceRoom.lastHeartBeat > 61000) {
+      DulceRoom.isOnline = false;
+  }
+  if (millis() - AshleyRoom.lastHeartBeat > 61000) {
+      AshleyRoom.isOnline = false;
+  }
+  if (millis() - MasterBedRoom.lastHeartBeat > 61000) {
+      MasterBedRoom.isOnline = false;
+  }
+  if (millis() - WeatherStation1.lastHeartBeat > 61000) {
+      WeatherStation1.isOnline = false;
+  }
+  if (millis() - CatFeeder.lastHeartBeat > 61000) {
+      CatFeeder.isOnline = false;
+  }
+
+
   Serial.print("Dulce is: "); Serial.println(DulceRoom.isOnline);
   Serial.print("Ashley is: "); Serial.println(AshleyRoom.isOnline);
   Serial.print("Fish tank is: "); Serial.println(FishTank.isOnline);
   Serial.print("Master Bedroom is: "); Serial.println(MasterBedRoom.isOnline);
   Serial.print("Weather Station 1 is: "); Serial.println(WeatherStation1.isOnline);
+  Serial.print("Cat Feeder is: "); Serial.println(CatFeeder.isOnline);
 }
 //************************************************************************************************************************
 void handleButtonPressed(long x, long y) {
@@ -424,7 +476,6 @@ void handleButtonsMainScreen(long x, long y) {
   }
   else if ( x > 0 && x < 157 && y > 135 && y < 241) {
     //FISH BUTTON
-    tft.print("FISH BUTTON");
     
     drawBmp("/FishMenu.bmp", 0, 0);
     if (connectedtoWIFI) {
@@ -434,9 +485,13 @@ void handleButtonsMainScreen(long x, long y) {
         drawBmp("/wifi_off.bmp", 0, 0);
     }
     tft.fillRect(40, 0, 280, 28, TFT_WHITE);
-    tft.print("FISH TANK MENU");
+    tft.print(Date); tft.print(Time);
     PrintFishTankInfo();
     screen = "fishtankmenu";
+
+    instructionsToSend.instruction1 = 4;
+    instructionsToSend.instruction2 = 1;
+    SendMessageRF24(fish_node);
   }
   else if ( x > 165 && x < 321 && y > 140 && y < 241) {
     //LIGHT BUTTON
@@ -632,12 +687,13 @@ String getContentType(String filename) {
 //************************************************************************************************************************
 void handleButtonsFishTankMenu(long x, long y) {
     if (x > 110 && x < 320 && y > 29 && y < 125) {
+        //FEED THE FISH BUTTON
         instructionsToSend.instruction1 = 2;
         SendMessageRF24(fish_node);
 
     }
     else  if (x > 0 && x < 100 && y > 29 && y < 125) {
-        //UPPER LEFT BUTTON
+        //RETURN TO SCREEN BUTTON (FISH LOGO)
         
         screen = "main";
         drawBmp("/homemenu2.bmp", 0, 0);
@@ -656,40 +712,68 @@ void handleButtonsFishTankMenu(long x, long y) {
 }
 //************************************************************************************************************************
 void PrintFishTankInfo() {
-    checkAvailabilities();
+    //checkAvailabilities();
     //Change font size and color
     tft.setTextSize(0.5);
     tft.setFreeFont(FF42);
     tft.setTextColor(TFT_BLACK);
+    tft.fillRect(155, 123, 93, 11, TFT_WHITE);
+    tft.fillRect(234, 150, 86, 90, TFT_WHITE);
+    if (FishTank.isOnline == true) {
+        tft.setCursor(160, 160);
+        tft.print(FishTank.temperature); tft.println(" F");
+        
+        tft.setCursor(160, 190);
+        if (FishTank.isON == 1) {
+            tft.setTextColor(TFT_DARKGREEN);
+            tft.println("Running");
+            tft.setTextColor(TFT_BLACK);
+        }
+        else if(FishTank.isON == 0){
+            tft.setTextColor(TFT_RED);
+            tft.print("Off");
+            tft.setTextColor(TFT_BLACK);
+        }
+        else if (FishTank.isON == 2) {
+            tft.setTextColor(TFT_PURPLE);
+            tft.print("Feeding");
+            tft.setTextColor(TFT_BLACK);
+        }
+        
 
-    tft.fillRect(160, 160, 100, 16, TFT_WHITE);
-    tft.setCursor(160, 160);
-    tft.println(FishTank.temperature);
+        tft.setCursor(160, 220);
+        float x; x = FishTank.timerLeft / 1000;
+        tft.print(x); tft.print(" sec");
+    }
+    else {
+        tft.setCursor(160, 160);
+        tft.println("NA");
 
-    tft.fillRect(160, 190, 100, 16, TFT_WHITE);
-    tft.setCursor(160, 190);
-    if (FishTank.isOnline == 0) {
+        tft.setCursor(160, 190);
         tft.println("Offline");
-    }
-    else if (FishTank.isOnline == 1) {
-        tft.println("Online");
-    }
-    
 
-    tft.fillRect(160, 220, 100, 16, TFT_WHITE);
-    tft.setCursor(160, 220);
-    tft.println(FishTank.timerLeft);
+        tft.setCursor(160, 220);
+        float x; x = FishTank.timerLeft / 1000;
+        tft.print("NA");
+    }
+ 
+   
 }
 
 //************************************************************************************************************************
 void HandleFishNodeMessage(contactorStationInformation Received) {
   FishTank = Received;
+  FishTank.isOnline = true;
+  Serial.print("Data Size: "); Serial.println(sizeof(Received));
+  Serial.print(F("isON: ")); Serial.println(FishTank.isON);
+  Serial.print(F("Temperature: ")); Serial.println(FishTank.temperature);
+  Serial.print(F("Humidity: ")); Serial.println(FishTank.humidity);
+  Serial.print(F("Motion: ")); Serial.println(FishTank.motion);
+  Serial.print(F("Timer Left: ")); Serial.println(FishTank.timerLeft);
+
   if (screen == "temperaturesmenu") {
     PrintTemperatures1();
-    Serial.print(F("isON: ")); Serial.println(FishTank.isON);
-    Serial.print(F("Temperature: ")); Serial.println(FishTank.temperature);
-    Serial.print(F("Humidity: ")); Serial.println(FishTank.humidity);
-    Serial.print(F("Motion: ")); Serial.println(FishTank.motion);
+   
   }
   if (screen == "fishtankmenu") {
      
@@ -698,7 +782,7 @@ void HandleFishNodeMessage(contactorStationInformation Received) {
 }
 //************************************************************************************************************************
 void HandleCatFeeder1NodeMessage(contactorStationInformation Received) {
-  FishTank = Received;
+  CatFeeder = Received;
   if (screen == "temperaturesmenu") {
     PrintTemperatures1();
     Serial.print(F("isON: ")); Serial.println(FishTank.isON);
