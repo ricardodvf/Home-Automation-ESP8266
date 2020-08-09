@@ -18,7 +18,7 @@ int year_;
 #include <RF24.h>
 #include <SPI.h>
 #include <TFT_eSPI.h> // Hardware-specific library
-#include "Free_Fonts.h"
+#include <Free_Fonts.h>
 #include <Adafruit_GFX.h>
 
 #define TFT_GREY 0x5AEB
@@ -54,7 +54,6 @@ typedef struct  {
 instructions instructionsToSend;
 
 typedef struct  {
-  uint16_t node_Address;
   long isOnline;
   long isON;
   float temperature;
@@ -88,6 +87,8 @@ contactorStationInformation WeatherStation1;
 #include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>   // Include the WebServer library
 #include <FS.h>   // Include the SPIFFS library
+#include <TFT_eSPI.h>
+#include <Free_Fonts.h>
 
 ESP8266WiFiMulti wifiMulti;     // Create an instance of the ESP8266WiFiMulti class, called 'wifiMulti'
 
@@ -106,6 +107,7 @@ bool handleFileRead(String path);       // send the right file to the client (if
 bool connectedtoWIFI = true;
 
 unsigned long lastTemperaturePrint;
+unsigned long lastClockUpdate;
 
 
 //************************************************************************************************************************
@@ -195,7 +197,7 @@ void loop(void) {
   if (millis() - lastTemperaturePrint > 60000 && screen == "temperaturesmenu" ) {
     PrintTemperatures1();
   }
-  if (millis() - lastRealTime > 86400000) {
+  if (millis() - lastRealTime > 43200000) {
       GetDateTime();
   }
   server.handleClient();                    // Listen for HTTP requests from clients
@@ -208,32 +210,32 @@ void loop(void) {
     Serial.print("Network Available: "); Serial.println(headerReceive.from_node);
     if (headerReceive.from_node == fish_node) {
       HandleFishNodeMessage(receivedInstructions);
-      FishTank.lastHeartBeat = millis();
+      FishTank.lastHeartBeat = millis()/2;
       FishTank.isOnline = true;
     }
     else if (headerReceive.from_node == dulce_node) {
       HandleDulceNodeMessage(receivedInstructions);
-      DulceRoom.lastHeartBeat = millis();
+      DulceRoom.lastHeartBeat = millis()/2;
       DulceRoom.isOnline = true;
     }
     else if (headerReceive.from_node == ashley_node) {
       HandleAshleyNodeMessage(receivedInstructions);
-      AshleyRoom.lastHeartBeat = millis();
+      AshleyRoom.lastHeartBeat = millis()/2;
       AshleyRoom.isOnline = true;
     }
     else if (headerReceive.from_node == masterbedroom_node) {
       HandleMasterBedroomNodeMessage(receivedInstructions);
-      MasterBedRoom.lastHeartBeat = millis();
+      MasterBedRoom.lastHeartBeat = millis()/2;
       MasterBedRoom.isOnline = true;
     }
     else if (headerReceive.from_node == weather1_node) {
       HandleWeather1NodeMessage(receivedInstructions);
-      WeatherStation1.lastHeartBeat = millis();
+      WeatherStation1.lastHeartBeat = millis()/2;
       WeatherStation1.isOnline = true;
     }
      else if (headerReceive.from_node == catfeeder1_node) {
       HandleCatFeeder1NodeMessage(receivedInstructions);
-      CatFeeder.lastHeartBeat = millis();
+      CatFeeder.lastHeartBeat = millis()/2;
       CatFeeder.isOnline = true;
     }
   }
@@ -245,10 +247,35 @@ void loop(void) {
   if (pressed) {
     handleButtonPressed(x, y);
   }
+  CheckHeartBeats();
+  UpdateClocks();
 
+}
+//***********************************************************************************************************************
+void UpdateClocks() {
+    tft.setTextSize(0.1);
+    tft.setFreeFont(FF17);
+    tft.setTextColor(TFT_BLACK);
+   
+    if (millis() - lastClockUpdate > 1500) {
+        lastClockUpdate = millis();
+        if (screen == "fishtankmenu") {
+            tft.setCursor(40, 20);
+            tft.fillRect(40, 0, 280, 28, TFT_WHITE);
+            tft.print(Date); tft.print("  "); tft.print(timeClient.getFormattedTime());
+        }
+    }
 }
 
 //***********************************************************************************************************************
+void CheckHeartBeats() {
+    if (millis()-(FishTank.lastHeartBeat*2) > 70000) {
+        FishTank.isOnline = 0;
+        if (screen == "fishtankmenu") {
+            PrintFishTankInfo();
+        }
+    }
+}
 //************************************************************************************************************************
 void GetDateTime() {
     //Gets the date and time from the internet
@@ -485,7 +512,7 @@ void handleButtonsMainScreen(long x, long y) {
         drawBmp("/wifi_off.bmp", 0, 0);
     }
     tft.fillRect(40, 0, 280, 28, TFT_WHITE);
-    tft.print(Date); tft.print(Time);
+    tft.print(Date); tft.print("  "); tft.print(timeClient.getFormattedTime());
     PrintFishTankInfo();
     screen = "fishtankmenu";
 
@@ -717,12 +744,14 @@ void PrintFishTankInfo() {
     tft.setTextSize(0.5);
     tft.setFreeFont(FF42);
     tft.setTextColor(TFT_BLACK);
-    tft.fillRect(155, 123, 93, 11, TFT_WHITE);
+    tft.fillRect(155, 123, 93, 114, TFT_WHITE);
     tft.fillRect(234, 150, 86, 90, TFT_WHITE);
     if (FishTank.isOnline == true) {
+        //print temperature
         tft.setCursor(160, 160);
         tft.print(FishTank.temperature); tft.println(" F");
         
+        //print pump status
         tft.setCursor(160, 190);
         if (FishTank.isON == 1) {
             tft.setTextColor(TFT_DARKGREEN);
@@ -740,7 +769,7 @@ void PrintFishTankInfo() {
             tft.setTextColor(TFT_BLACK);
         }
         
-
+        //print feeding timer
         tft.setCursor(160, 220);
         float x; x = FishTank.timerLeft / 1000;
         tft.print(x); tft.print(" sec");
@@ -753,7 +782,6 @@ void PrintFishTankInfo() {
         tft.println("Offline");
 
         tft.setCursor(160, 220);
-        float x; x = FishTank.timerLeft / 1000;
         tft.print("NA");
     }
  
@@ -776,7 +804,7 @@ void HandleFishNodeMessage(contactorStationInformation Received) {
    
   }
   if (screen == "fishtankmenu") {
-     
+      Serial.println(F("Printing in Fish Screen"));
       PrintFishTankInfo();
   }
 }
