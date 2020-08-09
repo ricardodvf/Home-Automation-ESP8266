@@ -11,7 +11,7 @@
 #include <printf.h>
 #include <nRF24L01.h>
 #include <SPI.h>
-#include <C:\Users\Ricardo\Documents\Arduino\libraries\DHTLib\dht.h>
+#include <dht.h>
 
 
 constexpr auto DHT11PIN = 9;
@@ -38,7 +38,6 @@ typedef struct {
 //Instruction:  0 - turn off the pump, 1 - turn on the pump, 2 - automatic timer for pump (shuts off and 5 minute restart)
 
 typedef struct {
-    uint16_t node_Address;
     long isOnline;
     long isON;
     float temperature;
@@ -46,7 +45,7 @@ typedef struct {
     long motion;
     long timerLeft;
     float current;
-    unsigned long lastHeartBeat;
+    long lastHeartBeat;
     float F1;
     float F2;
     float F3;
